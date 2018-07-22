@@ -1,6 +1,6 @@
 # ansible-pacemaker2
 
-Ansible modules for Pacemaker, cluster resource manager for Linux/*NIX
+Ansible modules set for Pacemaker, cluster resource manager for Linux/*NIX
 
 It contains below:
 - pacemaker_resource
@@ -10,4 +10,4 @@ It contains below:
 
 They depend on pacemaker commands below:
 - cibadmin
-- crm_mon (pacemaker_resource only)
+- crm_mon (pacemaker_resource* only)
