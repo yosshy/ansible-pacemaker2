@@ -27,7 +27,7 @@ options:
             - ID of pacemaker resource group.
     resource:
         description:
-            - List of Name of resource.
+            - List of resource names.
     state:
         description:
             - Whether the resource should be present or absent.
