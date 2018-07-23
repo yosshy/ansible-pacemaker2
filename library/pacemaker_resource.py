@@ -98,10 +98,9 @@ EXAMPLES = '''
 '''
 
 import shlex
-import traceback
-
-import xml.etree.cElementTree as ET
 import subprocess
+import traceback
+import xml.etree.cElementTree as ET
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils._text import to_native
