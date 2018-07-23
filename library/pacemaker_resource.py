@@ -79,7 +79,7 @@ EXAMPLES = '''
   pacemaker_resource:
     name: ms
     type: ocf:pacemaker:Dummy
-    master: clone-max=2 cloned-node-max=2
+    master: master-max=2
 
 - name: Enable a virtual IP resource
   pacemaker_resource:
