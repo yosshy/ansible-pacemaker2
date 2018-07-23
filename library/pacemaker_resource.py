@@ -28,9 +28,9 @@ options:
     type:
         description:
             - Name of resource type, in standard:provider:type or type.
-    attr:
+    params:
         description:
-            - Resource attributes in key=value style.
+            - Resource parameters in key=value style.
     op:
         description:
             - List of resource operations in key=value style.
@@ -64,7 +64,7 @@ EXAMPLES = '''
   pacemaker_resource:
     name: vip1
     type: ocf:heartbeat:IPaddr2
-    attr: ip=192.168.50.206 cidr_netmask=24
+    params: ip=192.168.50.206 cidr_netmask=24
     op:
       - monitor interval=20s
       - start timeout=30s
@@ -226,16 +226,16 @@ def append_operations_node(root, parent_id='', op=[]):
 
 
 def append_resource_node(root, name='', type='', op=[],
-                         meta='', attr='', **kwargs):
+                         meta='', params='', **kwargs):
     c, p, t = type.split(':')
     attrib = {'id': name, 'class': c, 'provider': p, 'type': t}
     node = ET.SubElement(root, "primitive", attrib)
     meta_dict = option_str_to_dict(meta)
     if meta_dict:
         append_meta_attribute_node(node, parent_id=name, **meta_dict)
-    attr_dict = option_str_to_dict(attr)
-    if attr_dict:
-        append_instance_attribute_node(node, parent_id=name, **attr_dict)
+    params_dict = option_str_to_dict(params)
+    if params_dict:
+        append_instance_attribute_node(node, parent_id=name, **params_dict)
     append_operations_node(node, parent_id=name, op=op)
     return node
 
@@ -287,7 +287,7 @@ def main():
         argument_spec=dict(
             name=dict(type='str', required=True),
             type=dict(type='str'),
-            attr=dict(type='str'),
+            params=dict(type='str'),
             meta=dict(type='str'),
             op=dict(type='list', default=[]),
             clone=dict(type='str'),
@@ -301,7 +301,7 @@ def main():
 
     name = module.params['name']
     type = module.params['type']
-    attr = module.params['attr']
+    params = module.params['params']
     meta = module.params['meta']
     op = module.params['op']
     clone = module.params['clone']
@@ -315,7 +315,7 @@ def main():
         changed=False,
         name=name,
         type=type,
-        attr=attr,
+        params=params,
         meta=meta,
         op=op,
         clone=clone,
