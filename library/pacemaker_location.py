@@ -22,14 +22,16 @@ description:
     - Set or unset a pacemaker location constratint
 options:
     resource:
+        required: true
         description:
-            - ID of the resource
+            - ID of the pacemaker resource.
     node:
+        required: true
         description:
-            - ID of the node
+            - ID of the pacemaker node.
     score:
         description:
-            - Constraint score: -INFINITY .. INFINITY
+            - Constraint score (-INFINITY .. INFINITY)
         default: INFINITY
     state:
         description:
@@ -60,7 +62,6 @@ EXAMPLES = '''
   pacemaker_location:
     resource: vip1
     node: control1
-    score: 100
     state: absent
 '''
 
@@ -130,8 +131,8 @@ def has_difference(current, new):
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            resource=dict(type='str', default=''),
-            node=dict(type='str', default=''),
+            resource=dict(type='str', required=True),
+            node=dict(type='str', required=True),
             score=dict(type='str', default='INFINITY'),
             state=dict(type='str', default='present',
                        choices=['absent', 'present']),
