@@ -142,7 +142,8 @@ def main():
         else:
             if len(nodes) == 0:
                 for key, value in params_dict.items():
-                    append_nvpair_node(parent_node, parent_id='cib-bootstrap-options',
+                    append_nvpair_node(parent_node,
+                                       parent_id='cib-bootstrap-options',
                                        name=name, value=value)
                 result['changed'] = True
             else:
