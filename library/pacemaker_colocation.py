@@ -19,20 +19,21 @@ short_description: Set or unset a pacemaker colocation constraint
 author:
     - Akira Yoshiyama <akirayoshiyama@gmail.com>
 description:
-    - Set or unset a pacemaker colocation constratint
+    - Set or unset a pacemaker colocation constratint.
+      Either a master/slave pair or a resource list is required.
 options:
     master:
         description:
-            - ID of the master resource
+            - ID of the master resource.
     slave:
         description:
-            - ID of the slave resource
+            - ID of the slave resource.
     resource:
         description:
-            - List of resources
+            - List of resources.
     score:
         description:
-            - Constraint score: -INFINITY .. INFINITY
+            - Constraint score (-INFINITY .. INFINITY)
         default: INFINITY
     option:
         description:
