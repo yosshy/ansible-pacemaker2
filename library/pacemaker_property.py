@@ -22,6 +22,7 @@ description:
     - Set or unset pacemaker properties
 options:
     params:
+        required: true
         description:
             - cluster properties in key=value style
     state:
@@ -103,7 +104,7 @@ def append_cluster_property_set_node(root, parent_id='', **kwargs):
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            params=dict(type='str', default=''),
+            params=dict(type='str', required=True),
             state=dict(type='str', default='present',
                        choices=['absent', 'present']),
         ),
@@ -141,14 +142,14 @@ def main():
                 result['changed'] = True
         else:
             if len(nodes) == 0:
-                for key, value in params_dict.items():
+                for name, value in params_dict.items():
                     append_nvpair_node(parent_node,
                                        parent_id='cib-bootstrap-options',
                                        name=name, value=value)
                 result['changed'] = True
             else:
-                for key, value in params_dict.items():
-                    node = nodes_map.get(key)
+                for name, value in params_dict.items():
+                    node = nodes_map.get(name)
                     if node is None:
                         append_nvpair_node(parent_node,
                                            parent_id='cib-bootstrap-options',
