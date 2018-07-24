@@ -70,7 +70,7 @@ from ansible.module_utils._text import to_native
 
 def get_cib():
     cmd = ["/usr/sbin/cibadmin", "--query"]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
         raise Exception(stderr)
@@ -81,28 +81,28 @@ def set_cib_constraints(cib):
     cib_xml = ET.tostring(cib)
     cmd = ["/usr/sbin/cibadmin", "--replace", "--scope", "constraints",
            "--xml-pipe"]
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    p.communicate(cib_xml)
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate(cib_xml)
     if p.returncode != 0:
         raise Exception(stderr)
 
 
-def append_colocation_node(constraints, res=None, res_role=None,
-                           with_res=None, with_res_role=None, score=''):
+def append_colocation_node(constraints, rsc=None, rsc_role=None,
+                           with_rsc=None, with_rsc_role=None, score=''):
     attrib = {
-        'id': 'colocation-%s-%s-%s' % (res, with_res, score),
-        'rsc': res,
-        'with-rsc': with_res,
+        'id': 'colocation-%s-%s-%s' % (rsc, with_rsc, score),
+        'rsc': rsc,
+        'with-rsc': with_rsc,
         'score': score,
     }
-    if res_role == 'master':
-        attrib['res-role'] = 'Master'
-    elif res_role == 'slave':
-        attrib['res-role'] = 'Slave'
-    if with_res_role == 'master':
-        attrib['with-res-role'] = 'Master'
-    elif with_res_role == 'slave':
-        attrib['with-res-role'] = 'Slave'
+    if rsc_role == 'master':
+        attrib['rsc-role'] = 'Master'
+    elif rsc_role == 'slave':
+        attrib['rsc-role'] = 'Slave'
+    if with_rsc_role == 'master':
+        attrib['with-rsc-role'] = 'Master'
+    elif with_rsc_role == 'slave':
+        attrib['with-rsc-role'] = 'Slave'
     return ET.SubElement(constraints, 'rsc_colocation', attrib)
 
 
@@ -173,33 +173,48 @@ def main():
         constraints = cib.find('.//constraints')
 
         if '=' in resource1:
-            res, res_role = resource1.split('=', 1)
+            rsc, rsc_role = resource1.split('=', 1)
         else:
-            res, res_role = resource1, None
+            rsc, rsc_role = resource1, None
         if '=' in resource2:
-            with_res, with_res_role = resource2.split('=', 1)
+            with_rsc, with_rsc_role = resource2.split('=', 1)
         else:
-            with_res, with_res_role = resource2, None
+            with_rsc, with_rsc_role = resource2, None
 
-        if res_role not in ['master', 'slave', None]:
-            raise Exception("invalid role for %s: %s" % (res, res_role))
-        if with_res_role not in ['master', 'slave', None]:
-            raise Exception("invalid role for %s: %s" % (with_res,
-                                                         with_res_role))
+        if rsc_role not in ['master', 'slave', None]:
+            raise Exception("invalid role for %s: %s" % (rsc, rsc_role))
+        if with_rsc_role not in ['master', 'slave', None]:
+            raise Exception("invalid role for %s: %s" % (with_rsc,
+                                                         with_rsc_role))
 
-        if resources.find(".//*[@id='%s']" % res) is None:
-            raise Exception("no such resource: %s" % res)
-        if resources.find(".//*[@id='%s']" % with_res) is None:
-            raise Exception("no such resource: %s" % with_res)
+        rsc_node = resources.find(".//*[@id='%s']" % rsc)
+        with_rsc_node = resources.find(".//*[@id='%s']" % with_rsc)
+        if rsc_node is None:
+            raise Exception("no such resource: %s" % rsc)
+        if with_rsc_node is None:
+            raise Exception("no such resource: %s" % with_rsc)
+
+        if rsc_role:
+            if rsc_node.tag == 'primitive':
+                rsc_node = resources.find(".//*[@id='%s']/.." % rsc)
+            if rsc_node.tag != 'master':
+                raise Exception("resource without master: %s" % rsc)
+            rsc = rsc_node.get('id')
+        if with_rsc_role:
+            if with_rsc_node.tag == 'primitive':
+                rsc_node = resources.find(".//*[@id='%s']/.." % with_rsc)
+            if with_rsc_node.tag != 'master':
+                raise Exception("resource without master: %s" % with_rsc)
+            with_rsc = with_rsc_node.get('id')
 
         # Get current colocation constraints
         nodes = \
             constraints.findall(
                 ".//rsc_colocation[@rsc='%s'][@with-rsc='%s']" % (
-                    res, with_res)) + \
+                    rsc, with_rsc)) + \
             constraints.findall(
                 ".//rsc_colocation[@rsc='%s'][@with-rsc='%s']" % (
-                    with_res, res))
+                    with_rsc, rsc))
 
         # Add/remove the colocation constraint as needed
         if state == 'absent':
@@ -209,12 +224,12 @@ def main():
                 result['changed'] = True
         else:
             if len(nodes) == 0:
-                node = append_colocation_node(constraints, res, res_role,
-                                              with_res, with_res_role, score)
+                node = append_colocation_node(constraints, rsc, rsc_role,
+                                              with_rsc, with_rsc_role, score)
                 result['changed'] = True
             else:
-                new_node = append_colocation_node(constraints, res, res_role,
-                                                  with_res, with_res_role,
+                new_node = append_colocation_node(constraints, rsc, rsc_role,
+                                                  with_rsc, with_rsc_role,
                                                   score)
                 for node in nodes:
                     if has_difference(node, new_node):
@@ -229,6 +244,8 @@ def main():
 
         # Apply the modified CIB as needed
         if result['changed'] and not check_only:
+            with open('/tmp/log', 'w') as f:
+                f.write(ET.tostring(constraints))
             set_cib_constraints(constraints)
 
         # Report the success result and exit
