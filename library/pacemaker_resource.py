@@ -108,7 +108,7 @@ from ansible.module_utils._text import to_native
 
 def get_cib_resources():
     cmd = ["/usr/sbin/cibadmin", "--query", "--scope", "resources"]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
         raise Exception(stderr)
@@ -119,15 +119,15 @@ def set_cib_resources(cib):
     cib_xml = ET.tostring(cib)
     cmd = ["/usr/sbin/cibadmin", "--replace", "--scope", "resources",
            "--xml-pipe"]
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    p.communicate(cib_xml)
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate(cib_xml)
     if p.returncode != 0:
         raise Exception(stderr)
 
 
 def get_crm_mon():
     cmd = ["/usr/sbin/crm_mon", "--as-xml"]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
         raise Exception(stderr)

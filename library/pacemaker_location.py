@@ -76,7 +76,7 @@ from ansible.module_utils._text import to_native
 
 def get_cib():
     cmd = ["/usr/sbin/cibadmin", "--query"]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
         raise Exception(stderr)
@@ -87,8 +87,8 @@ def set_cib_constraints(cib):
     cib_xml = ET.tostring(cib)
     cmd = ["/usr/sbin/cibadmin", "--replace", "--scope", "constraints",
            "--xml-pipe"]
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    p.communicate(cib_xml)
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate(cib_xml)
     if p.returncode != 0:
         raise Exception(stderr)
 
