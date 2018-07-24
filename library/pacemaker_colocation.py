@@ -20,24 +20,19 @@ author:
     - Akira Yoshiyama <akirayoshiyama@gmail.com>
 description:
     - Set or unset a pacemaker colocation constratint.
-      Either a master/slave pair or a resource list is required.
 options:
-    master:
+    resource1:
         description:
-            - ID of the master resource.
-    slave:
+            - ID of the first resource, append '=master' or '=slave'
+              to the ID if required.
+    resource2:
         description:
-            - ID of the slave resource.
-    resource:
-        description:
-            - List of resources.
+            - ID of the second resource, append '=master' or '=slave'
+              to the ID if required.
     score:
         description:
             - Constraint score (-INFINITY .. INFINITY)
         default: INFINITY
-    option:
-        description:
-            - Options with key=value style
     state:
         description:
             - Whether the colocation constratint should be present or absent.
@@ -51,31 +46,16 @@ options:
 '''
 
 EXAMPLES = '''
-- name: Add a master-slave style colocation constratint
-  pacemaker_colocation:
-    master: vip1
-    slave: vip2
-    state: present
-
-- name: Remove a master-slave style colocation constratint
-  pacemaker_colocation:
-    master: vip1
-    slave: vip2
-    state: absent
-
 - name: Add a colocation constratint
   pacemaker_colocation:
-    resource:
-      - vip1
-      - vip2
-    score: -100
+    resource1: vip1=master
+    resource2: vip2
     state: present
 
 - name: Remove a colocation constratint
   pacemaker_colocation:
-    resource:
-      - vip1
-      - vip2
+    resource1: vip1
+    resource2: vip2
     state: absent
 '''
 
@@ -107,33 +87,22 @@ def set_cib_constraints(cib):
         raise Exception(stderr)
 
 
-def append_colocation_node(resources, constraints, master=None,
-                           slave=None, resource=[], score='', **kwargs):
-    if len(resource) == 2:
-        rsc, with_rsc = resource
-        if resources.find(".//*[@id='%s']" % rsc) is None:
-            raise Exception("no such resource: %s" % rsc)
-        if resources.find(".//*[@id='%s']" % with_rsc) is None:
-            raise Exception("no such resource: %s" % with_rsc)
-        attrib = {
-            'id': 'colocation-%s-%s-%s' % (rsc, with_rsc, score),
-            'rsc': rsc,
-            'with-rsc': with_rsc,
-            'score': score,
-        }
-    else:
-        if resources.find(".//*[@id='%s']" % master) is None:
-            raise Exception("no such resource: %s" % master)
-        if resources.find(".//*[@id='%s']" % slave) is None:
-            raise Exception("no such resource: %s" % slave)
-        attrib = {
-            'id': 'colocation-%s-%s-%s' % (master, slave, score),
-            'rsc': master,
-            'rsc-role': 'Master',
-            'with-rsc': slave,
-            'with-rsc-role': 'Slave',
-            'score': score,
-        }
+def append_colocation_node(constraints, res=None, res_role=None,
+                           with_res=None, with_res_role=None, score=''):
+    attrib = {
+        'id': 'colocation-%s-%s-%s' % (res, with_res, score),
+        'rsc': res,
+        'with-rsc': with_res,
+        'score': score,
+    }
+    if res_role == 'master':
+        attrib['res-role'] = 'Master'
+    elif res_role == 'slave':
+        attrib['res-role'] = 'Slave'
+    if with_res_role == 'master':
+        attrib['with-res-role'] = 'Master'
+    elif with_res_role == 'slave':
+        attrib['with-res-role'] = 'Slave'
     return ET.SubElement(constraints, 'rsc_colocation', attrib)
 
 
@@ -171,11 +140,9 @@ def has_difference(current, new):
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            master=dict(type='str', default=''),
-            slave=dict(type='str', default=''),
-            resource=dict(type='list', default=[]),
+            resource1=dict(type='str', required=True),
+            resource2=dict(type='str', required=True),
             score=dict(type='str', default='INFINITY'),
-            option=dict(type='str', default=''),
             state=dict(type='str', default='present',
                        choices=['absent', 'present']),
             force=dict(type='bool', default=None),
@@ -183,64 +150,56 @@ def main():
         supports_check_mode=True,
     )
 
-    master = module.params['master']
-    slave = module.params['slave']
-    resource = module.params['resource']
+    resource1 = module.params['resource1']
+    resource2 = module.params['resource2']
     score = module.params['score']
-    option = module.params['option']
     state = module.params['state']
     force = module.params['force']
 
     check_only = module.check_mode
 
     result = dict(
-        master=master,
-        slave=slave,
-        resource=resource,
+        resource1=resource1,
+        resource2=resource2,
         score=score,
-        option=option,
         state=state,
         force=force,
         changed=False
     )
-
-    if len(resource) == 2:
-        if len(master) or len(slave):
-            module.fail_json(
-                msg="Can't use both master/slave and resource at once",
-                **result)
-    elif len(resource) == 0:
-        if len(master) == 0 or len(slave) == 0:
-            module.fail_json(
-                msg="Either master/slave set or resource is required",
-                **result)
-    else:
-        module.fail_json(
-            msg="resource parameter should have 2 resource ids",
-            **result)
 
     try:
         cib = get_cib()
         resources = cib.find('.//resources')
         constraints = cib.find('.//constraints')
 
-        # Get current colocation constraints
-        if len(resource):
-            nodes = \
-                constraints.findall(
-                    ".//rsc_colocation[@rsc='%s'][@with-rsc='%s']" % (
-                        resource[0], resource[1])) + \
-                constraints.findall(
-                    ".//rsc_colocation[@rsc='%s'][@with-rsc='%s']" % (
-                        resource[1], resource[0]))
+        if '=' in resource1:
+            res, res_role = resource1.split('=', 1)
         else:
-            nodes = \
-                constraints.findall(
-                    ".//rsc_colocation[@rsc='%s'][@with-rsc='%s']" % (
-                        master, slave)) + \
-                constraints.findall(
-                    ".//rsc_colocation[@rsc='%s'][@with-rsc='%s']" % (
-                        slave, master))
+            res, res_role = resource1, None
+        if '=' in resource2:
+            with_res, with_res_role = resource2.split('=', 1)
+        else:
+            with_res, with_res_role = resource2, None
+
+        if res_role not in ['master', 'slave', None]:
+            raise Exception("invalid role for %s: %s" % (res, res_role))
+        if with_res_role not in ['master', 'slave', None]:
+            raise Exception("invalid role for %s: %s" % (with_res,
+                                                         with_res_role))
+
+        if resources.find(".//*[@id='%s']" % res) is None:
+            raise Exception("no such resource: %s" % res)
+        if resources.find(".//*[@id='%s']" % with_res) is None:
+            raise Exception("no such resource: %s" % with_res)
+
+        # Get current colocation constraints
+        nodes = \
+            constraints.findall(
+                ".//rsc_colocation[@rsc='%s'][@with-rsc='%s']" % (
+                    res, with_res)) + \
+            constraints.findall(
+                ".//rsc_colocation[@rsc='%s'][@with-rsc='%s']" % (
+                    with_res, res))
 
         # Add/remove the colocation constraint as needed
         if state == 'absent':
@@ -250,12 +209,13 @@ def main():
                 result['changed'] = True
         else:
             if len(nodes) == 0:
-                node = append_colocation_node(resources, constraints,
-                                              **module.params)
+                node = append_colocation_node(constraints, res, res_role,
+                                              with_res, with_res_role, score)
                 result['changed'] = True
             else:
-                new_node = append_colocation_node(resources, constraints,
-                                                  **module.params)
+                new_node = append_colocation_node(constraints, res, res_role,
+                                                  with_res, with_res_role,
+                                                  score)
                 for node in nodes:
                     if has_difference(node, new_node):
                         result['changed'] = True
