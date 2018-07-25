@@ -14,6 +14,7 @@ They depend on pacemaker commands below:
 - crm_mon (pacemaker_resource* only)
 
 Usage:
+```
 - pacemaker_property:
     params: stonith-enabled=false start-failure-is-fatal="false"
 
@@ -64,3 +65,4 @@ Usage:
     resource: mariadb-vip
     node: server1
     score: 100
+```
