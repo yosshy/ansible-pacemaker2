@@ -228,8 +228,8 @@ def main():
                 './/rsc_order[@first="%s"][@first-action="%s"]'
                 '[@then="%s"][@then-action="%s"]' % (
                     resource1, resource1_action, resource2, resource2_action))
-            if nodes is None:
-                node = append_rsc_order_node(constraints, **module.params)
+            if len(nodes) == 0:
+                append_rsc_order_node(constraints, **module.params)
                 result['changed'] = True
             else:
                 new_node = append_rsc_order_node(constraints, **module.params)
@@ -237,7 +237,7 @@ def main():
                     if force or has_difference(node, new_node):
                         constraints.remove(node)
                         result['changed'] = True
-                else:
+                if not result['changed']:
                     constraints.remove(new_node)
 
         # Apply the modified CIB as needed
