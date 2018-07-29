@@ -226,8 +226,12 @@ def append_operations_node(root, parent_id='', op=[]):
 
 def append_resource_node(root, name='', type='', op=[],
                          meta='', params='', **kwargs):
-    c, p, t = type.split(':')
-    attrib = {'id': name, 'class': c, 'provider': p, 'type': t}
+    try:
+        c, p, t = type.split(':')
+        attrib = {'id': name, 'class': c, 'provider': p, 'type': t}
+    except ValueError:
+        c, t = type.split(':')
+        attrib = {'id': name, 'class': c, 'type': t}
     node = ET.SubElement(root, "primitive", attrib)
     meta_dict = option_str_to_dict(meta)
     if meta_dict:
