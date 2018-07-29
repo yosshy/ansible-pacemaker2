@@ -23,12 +23,12 @@ description:
 options:
     resource1:
         description:
-            - ID of the first resource, append '=master' or '=slave'
-              to the ID if required.
+            - ID of the first resource, append '=master', '=slave',
+              '=started' or '=stopped' to the ID if required.
     resource2:
         description:
-            - ID of the second resource, append '=master' or '=slave'
-              to the ID if required.
+            - ID of the second resource, append '=master', '=slave',
+              '=started' or '=stopped' to the ID if required.
     score:
         description:
             - Constraint score (-INFINITY .. INFINITY)
@@ -99,10 +99,18 @@ def append_colocation_node(constraints, rsc=None, rsc_role=None,
         attrib['rsc-role'] = 'Master'
     elif rsc_role == 'slave':
         attrib['rsc-role'] = 'Slave'
+    elif rsc_role == 'started':
+        attrib['rsc-role'] = 'Started'
+    elif rsc_role == 'stopped':
+        attrib['rsc-role'] = 'Stopped'
     if with_rsc_role == 'master':
         attrib['with-rsc-role'] = 'Master'
     elif with_rsc_role == 'slave':
         attrib['with-rsc-role'] = 'Slave'
+    elif with_rsc_role == 'started':
+        attrib['with-rsc-role'] = 'Started'
+    elif with_rsc_role == 'stopped':
+        attrib['with-rsc-role'] = 'Stopped'
     return ET.SubElement(constraints, 'rsc_colocation', attrib)
 
 
@@ -181,9 +189,10 @@ def main():
         else:
             with_rsc, with_rsc_role = resource2, None
 
-        if rsc_role not in ['master', 'slave', None]:
+        if rsc_role not in ['master', 'slave', 'started', 'stopped', None]:
             raise Exception("invalid role for %s: %s" % (rsc, rsc_role))
-        if with_rsc_role not in ['master', 'slave', None]:
+        if with_rsc_role not in ['master', 'slave', 'started', 'stopped',
+                                 None]:
             raise Exception("invalid role for %s: %s" % (with_rsc,
                                                          with_rsc_role))
 
@@ -194,13 +203,13 @@ def main():
         if with_rsc_node is None:
             raise Exception("no such resource: %s" % with_rsc)
 
-        if rsc_role:
+        if rsc_role in ['master', 'slave']:
             if rsc_node.tag == 'primitive':
                 rsc_node = resources.find(".//*[@id='%s']/.." % rsc)
             if rsc_node.tag != 'master':
                 raise Exception("resource without master: %s" % rsc)
             rsc = rsc_node.get('id')
-        if with_rsc_role:
+        if with_rsc_role in ['master', 'slave']:
             if with_rsc_node.tag == 'primitive':
                 rsc_node = resources.find(".//*[@id='%s']/.." % with_rsc)
             if with_rsc_node.tag != 'master':
