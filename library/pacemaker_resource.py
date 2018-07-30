@@ -125,40 +125,33 @@ def set_cib_resources(cib):
         raise Exception(stderr)
 
 
-def is_enabled(res):
-    name = res.get('id')
-    meta = res.find('./meta_attributes')
-    if meta is None:
-        return True
-    node = meta.find("./nvpair[@name='target-role']")
-    if node is None:
-        return True
-    if node.get('value') != 'Stopped':
-        return True
-    return False
-
-
-def set_resource_status(res, enabled=True):
-    name = res.get('id')
-    meta = res.find('./meta_attributes')
+def set_resource_status(root, enabled=True):
+    name = root.get('id')
+    meta = root.find('./meta_attributes')
     if meta is not None:
         node = meta.find("./nvpair[@name='target-role']")
     else:
-        meta = append_meta_attribute_node(res, parent_id=name)
+        meta = append_meta_attribute_node(root, parent_id=name)
         node = None
     if enabled:
         if node is not None:
-            meta.remove(node)
+            if node.get('value') == 'Stopped':
+                meta.remove(node)
+                return True
     else:
-        if node is not None:
-            node.set('value', 'Stopped')
-        else:
+        if node is None:
             attrib = {
                 'id': "%s-meta_attributes-target-role" % name,
                 'name': 'target-role',
                 'value': 'Stopped'
             }
             ET.SubElement(meta, 'nvpair', attrib)
+            return True
+        else:
+            if node.get('value') != 'Stopped':
+                node.set('value', 'Stopped')
+                return True
+    return False
 
 
 def option_str_to_dict(opts):
@@ -403,13 +396,12 @@ def main():
                             parent_node.remove(new_node)
 
         # Start/stop the resource as needed
-        enabled = is_enabled(node)
-        if state == 'enabled' and not enabled:
-            set_resource_status(node, enabled=True)
-            result['changed'] = True
-        elif state == 'disabled' and enabled:
-            set_resource_status(node, enabled=False)
-            result['changed'] = True
+        if state == "enabled":
+            if set_resource_status(node, enabled=True):
+                result['changed'] = True
+        elif state == "disabled":
+            if set_resource_status(node, enabled=False):
+                result['changed'] = True
 
         # Apply the modified CIB as needed
         if result['changed'] and not check_only:
