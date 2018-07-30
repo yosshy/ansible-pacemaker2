@@ -50,7 +50,7 @@ options:
     state:
         description:
             - Whether the resource should be present or absent.
-        choices: [ absent, present, started, stopped ]
+        choices: [ absent, present, enabled, disabled ]
         default: present
     force:
         description:
@@ -84,12 +84,12 @@ EXAMPLES = '''
 - name: Enable a virtual IP resource
   pacemaker_resource:
     name: vip1
-    state: started
+    state: enabled
 
 - name: Disable a virtual IP resource
   pacemaker_resource:
     name: vip1
-    state: stopped
+    state: disabled
 
 - name: Remove a virtual IP resource
   pacemaker_resource:
@@ -125,20 +125,17 @@ def set_cib_resources(cib):
         raise Exception(stderr)
 
 
-def get_crm_mon():
-    cmd = ["/usr/sbin/crm_mon", "--as-xml"]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = p.communicate()
-    if p.returncode != 0:
-        raise Exception(stderr)
-    return ET.fromstring(stdout)
-
-
-def is_started(name):
-    e = get_crm_mon()
-    res = e.find('.//resource[@id="%s"]' % name)
-    if res is not None:
-        return res.get('role') == 'Started'
+def is_enabled(res):
+    name = res.get('id')
+    meta = res.find('./meta_attributes')
+    if meta is None:
+        return True
+    node = meta.find("./nvpair[@name='target-role']")
+    if node is None:
+        return True
+    if node.get('value') != 'Stopped':
+        return True
+    return False
 
 
 def set_resource_status(res, enabled=True):
@@ -296,7 +293,7 @@ def main():
             clone=dict(type='str'),
             master=dict(type='str'),
             state=dict(type='str', default='present',
-                       choices=['absent', 'present', 'started', 'stopped']),
+                       choices=['absent', 'present', 'enabled', 'disabled']),
             force=dict(type='bool', default=None),
         ),
         supports_check_mode=True,
@@ -406,11 +403,11 @@ def main():
                             parent_node.remove(new_node)
 
         # Start/stop the resource as needed
-        started = is_started(name)
-        if state == 'started' and not started:
+        enabled = is_enabled(node)
+        if state == 'enabled' and not enabled:
             set_resource_status(node, enabled=True)
             result['changed'] = True
-        elif state == 'stopped' and started:
+        elif state == 'disabled' and enabled:
             set_resource_status(node, enabled=False)
             result['changed'] = True
 
