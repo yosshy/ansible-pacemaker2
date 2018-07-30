@@ -31,7 +31,7 @@ options:
     state:
         description:
             - Whether the resource should be present or absent.
-        choices: [ absent, present, started, stopped ]
+        choices: [ absent, present, enabled, disabled ]
         default: present
 '''
 
@@ -192,7 +192,7 @@ def main():
             resource=dict(type='list', default=[]),
             meta=dict(type='str'),
             state=dict(type='str', default='present',
-                       choices=['absent', 'present', 'started', 'stopped']),
+                       choices=['absent', 'present', 'enabled', 'disabled']),
             force=dict(type='bool', default=False),
         ),
         supports_check_mode=True,
@@ -248,10 +248,10 @@ def main():
                     parent_node.remove(new_node)
 
         # Start/stop the resource as needed
-        if state == "started":
+        if state == "enabled":
             if set_group_status(node, enabled=True):
                 result['changed'] = True
-        elif state == "stopped":
+        elif state == "disabled":
             if set_group_status(node, enabled=False):
                 result['changed'] = True
 
