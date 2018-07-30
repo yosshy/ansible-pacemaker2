@@ -11,9 +11,9 @@ It contains below:
 
 They depend on pacemaker commands below:
 - cibadmin
-- crm_mon (pacemaker_resource* only)
 
-Usage:
+## Usage
+
 ```
 - pacemaker_property:
     params: stonith-enabled=false start-failure-is-fatal="false"
