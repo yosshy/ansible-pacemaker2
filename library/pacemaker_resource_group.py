@@ -77,22 +77,6 @@ def set_cib_resources(cib):
         raise Exception(stderr)
 
 
-def get_crm_mon():
-    cmd = ["/usr/sbin/crm_mon", "--as-xml"]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = p.communicate()
-    if p.returncode != 0:
-        raise Exception(stderr)
-    return ET.fromstring(stdout)
-
-
-def is_started(name):
-    e = get_crm_mon()
-    res = e.find('.//resource[@id="%s"]' % name)
-    if res is not None:
-        return res.get('role') == 'Started'
-
-
 def set_group_status(root, enabled=True):
     name = root.get('id')
     meta = root.find('./meta_attributes')
