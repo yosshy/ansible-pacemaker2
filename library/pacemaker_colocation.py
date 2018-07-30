@@ -253,8 +253,6 @@ def main():
 
         # Apply the modified CIB as needed
         if result['changed'] and not check_only:
-            with open('/tmp/log', 'w') as f:
-                f.write(ET.tostring(constraints))
             set_cib_constraints(constraints)
 
         # Report the success result and exit
