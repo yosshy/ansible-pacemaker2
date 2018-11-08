@@ -59,7 +59,7 @@ They depend on pacemaker commands below:
 - pacemaker_colocation:
     resource1: mariadb-service=master
     resource2: mariadb-vip
-    score: INFINITY
+    score: 1000
 
 - pacemaker_locaiton:
     resource: mariadb-vip
