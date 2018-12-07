@@ -5,9 +5,14 @@ Ansible modules set for Pacemaker, cluster resource manager for Linux/*NIX
 It contains below:
 - pacemaker_resource: configure a pacemaker resource, including clone and master ones
 - pacemaker_resource_group: configure a pacemaker resource group
+- pacemaker_resource_default: configure default resource parameters
 - pacemaker_location: configure a location constraint
 - pacemaker_colocation: configure a colocation constraint
+- pacemaker_order: configure an order constraint
+- pacemaker_order_set: configure an order-set constraint
 - pacemaker_property: configure pacemaker cluster properties
+
+
 
 They depend on pacemaker commands below:
 - cibadmin
