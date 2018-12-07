@@ -12,10 +12,7 @@ It contains below:
 - pacemaker_order_set: configure an order-set constraint
 - pacemaker_property: configure pacemaker cluster properties
 
-
-
-They depend on pacemaker commands below:
-- cibadmin
+They depend on cibadmin command of pacemaker.
 
 ## Usage
 
