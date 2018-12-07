@@ -21,7 +21,7 @@ They depend on pacemaker commands below:
 - pacemaker_resource:
     name: mariadb-service
     type: ocf:heartbeat:mysql
-    params: >
+    params: |
       binary=/usr/bin/mysqld_safe
       datadir=/var/lib/mysql
       log=/var/log/mariadb/mariadb.log
@@ -37,7 +37,7 @@ They depend on pacemaker commands below:
       - promote interval=0 timeout=120s
       - demote interval=0 timeout=120s
       - notify interval=0 timeout=90s
-    master: >
+    master: |
       master-max=1
       master-node-max=1
       clone-max=2
@@ -59,7 +59,7 @@ They depend on pacemaker commands below:
 - pacemaker_colocation:
     resource1: mariadb-service=master
     resource2: mariadb-vip
-    score: 1000
+    score: INFINITY
 
 - pacemaker_locaiton:
     resource: mariadb-vip
