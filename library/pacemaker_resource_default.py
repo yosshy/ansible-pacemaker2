@@ -49,8 +49,8 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils._text import to_native
 
 
-def get_cib_rsc_defaults():
-    cmd = ["/usr/sbin/cibadmin", "--query", "--scope", "rsc_defaults"]
+def get_cib_configuration():
+    cmd = ["/usr/sbin/cibadmin", "--query", "--scope", "configuration"]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
@@ -58,9 +58,9 @@ def get_cib_rsc_defaults():
     return ET.fromstring(stdout)
 
 
-def set_cib_rsc_defaults(cib):
+def set_cib_configuration(cib):
     cib_xml = ET.tostring(cib)
-    cmd = ["/usr/sbin/cibadmin", "--replace", "--scope", "rsc_defaults",
+    cmd = ["/usr/sbin/cibadmin", "--replace", "--scope", "configuration",
            "--xml-pipe"]
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate(cib_xml)
@@ -87,7 +87,17 @@ def option_str_to_dict(opts):
 def append_nvpair_node(root, parent_id='', name='', value=''):
     node_id = "%s-%s" % (parent_id, name)
     attrib = {'id': node_id, 'name': name, 'value': value}
-    node = ET.SubElement(root, "nvpair", attrib)
+    return ET.SubElement(root, "nvpair", attrib)
+
+
+def append_meta_attributes_nodes(root):
+    attrib = {'id': 'rsc_defaults-options'}
+    return ET.SubElement(root, "meta_attributes", attrib)
+
+
+def append_rsc_defaults_node(root):
+    node = ET.SubElement(root, "rsc_defaults")
+    append_meta_attributes_nodes(node)
     return node
 
 
@@ -113,11 +123,16 @@ def main():
     )
 
     try:
-        rsc_defaults = get_cib_rsc_defaults()
-        parent_node = rsc_defaults.find('.//meta_attributes')
+        configuration = get_cib_configuration()
+        rsc_defaults = configuration.find('./rsc_defaults')
+        if rsc_defaults is None:
+            rsc_defaults = append_rsc_defaults_node(configuration)
+        parent_node = rsc_defaults.find('./meta_attributes')
+        if parent_node is None:
+            parent_node = append_meta_attributes_nodes(rsc_defaults)
 
         # Get current properties
-        nodes = parent_node.findall(".//nvpair")
+        nodes = parent_node.findall("./nvpair")
         nodes_map = {x.get('name'): x for x in nodes}
 
         # Get ID list from params
@@ -145,7 +160,7 @@ def main():
 
         # Apply the modified CIB as needed
         if result['changed'] and not check_only:
-            set_cib_rsc_defaults(rsc_defaults)
+            set_cib_configuration(configuration)
 
         # Report the success result and exit
         module.exit_json(**result)
