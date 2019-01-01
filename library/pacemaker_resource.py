@@ -345,8 +345,7 @@ def main():
                 elif clone is not None:
                     parent_node, node = append_clone_node(cib, **module.params)
                 else:
-                    parent_node, node = append_resource_node(cib,
-                                                             **module.params)
+                    node = append_resource_node(cib, **module.params)
                 result['changed'] = True
             else:
                 if master is not None:
